@@ -35,6 +35,7 @@ export class EnvError extends Error {}
  * @property {string} n8nSigningSecret
  * @property {import('./api-keys.js').ApiKey[]} apiKeys
  * @property {boolean} production
+ * @property {boolean} backups   false only when BACKUPS=off was set deliberately
  */
 
 /**
@@ -43,7 +44,10 @@ export class EnvError extends Error {}
  */
 export function loadEnv(source = process.env) {
   const production = source.NODE_ENV === 'production';
-  const required = production ? [...REQUIRED, ...REQUIRED_IN_PRODUCTION] : REQUIRED;
+  // Backups are mandatory in production unless switched off on purpose.
+  // `BACKUPS=off` is a deliberate, logged choice; forgetting the bucket is not.
+  const backups = source.BACKUPS?.trim().toLowerCase() !== 'off';
+  const required = production && backups ? [...REQUIRED, ...REQUIRED_IN_PRODUCTION] : REQUIRED;
   const missing = required.filter((name) => !source[name]?.trim());
   if (missing.length) {
     throw new EnvError(`Missing required environment variables: ${missing.join(', ')}`);
@@ -68,6 +72,7 @@ export function loadEnv(source = process.env) {
     n8nSigningSecret: /** @type {string} */ (source.N8N_SIGNING_SECRET),
     apiKeys: parseApiKeys(/** @type {string} */ (source.API_KEYS)),
     production,
+    backups,
   });
 }
 

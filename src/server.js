@@ -235,6 +235,9 @@ async function main() {
   });
   app = await buildApp({ env, db, renderer });
   app.log.info(seeded, 'seed import');
+  if (env.production && !env.backups) {
+    app.log.warn('BACKUPS=off: running in production without Litestream replication');
+  }
   renderer.renderNow();
 
   const worker = createOutboxWorker({ db, env, log: app.log });

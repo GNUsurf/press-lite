@@ -37,6 +37,8 @@ deviations and things to verify. Close an item, delete its line.
 
 ## Known limitations to fix later
 
+- **`BACKUPS=off` exists.** The spec says production refuses to start without `LITESTREAM_*`; the first Railway deploy had no bucket yet, so this opt-out was added. It is logged as a warning at every boot and `GET /api/v1/status` reports `backups.configured: false`. Remove the variable as soon as the bucket exists; don't ship a client on it.
+
 - Rate limiting is in-memory (single instance, fine on Railway; resets on restart).
 - `trustProxy: true` is set because Railway terminates TLS and forwards `X-Forwarded-For`. If the service is ever exposed without a proxy in front, clients could spoof that header and dodge the per-IP rate limit; switch it off or restrict it to the proxy's address.
 - **Assets are reachable before approval.** An image is served at `/images/<uuid>.<ext>` from the moment it is imported, even if only a draft uses it. The URL is unguessable (uuid) and never linked from a public page until publish, but it is the one exception to "nothing is public until published". Gating it on "used by a live version" would break images embedded in draft bodies during preview; revisit in M12 (serve draft-only assets through the preview route) if a client needs the stricter rule.

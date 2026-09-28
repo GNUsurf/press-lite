@@ -27,6 +27,14 @@ test('fails closed, naming every missing variable', () => {
   );
 });
 
+test('BACKUPS=off is a deliberate opt-out from LITESTREAM_* in production', () => {
+  const env = loadEnv(envVars({ NODE_ENV: 'production', BACKUPS: 'off' }));
+  assert.equal(env.production, true);
+  assert.equal(env.backups, false);
+  assert.equal(loadEnv(envVars()).backups, true, 'on by default');
+  assert.throws(() => loadEnv(envVars({ NODE_ENV: 'production', BACKUPS: 'no' })), /LITESTREAM/);
+});
+
 test('production also requires LITESTREAM_*', () => {
   assert.throws(
     () => loadEnv(envVars({ NODE_ENV: 'production' })),

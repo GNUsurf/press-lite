@@ -184,4 +184,6 @@ Markdown body. Raw HTML is escaped, not rendered.
 `PORT` (Railway sets it), `DATA_DIR=/data`, `SITE_URL`, `N8N_WEBHOOK_URL`,
 `N8N_WEBHOOK_TOKEN`, `N8N_SIGNING_SECRET`, `API_KEYS`, and the four
 `LITESTREAM_*` values for backups. A missing one stops the service from
-starting and names itself in the logs.
+starting and names itself in the logs. Before the backup bucket exists you
+may set `BACKUPS=off` to boot without replication; it is logged at every
+start, and it is not a way to run a client's site for real.

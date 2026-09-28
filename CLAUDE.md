@@ -139,7 +139,7 @@ Local quirks on the owner's machine: the sandbox blocks writes to `~/.npm/_cacac
 | `API_KEYS`           | yes                   | `name:scope,scope:sha256hex;…` from `scripts/key.js`. Raw keys are never stored. |
 | `LITESTREAM_*`       | yes in production     | replica bucket, endpoint, credentials                                            |
 
-A missing required var means the process exits non-zero with the variable's name in the error. There are no defaults for secrets.
+A missing required var means the process exits non-zero with the variable's name in the error. There are no defaults for secrets. The one escape hatch: `BACKUPS=off` makes the `LITESTREAM_*` variables optional in production, as a deliberate choice that is logged at every boot; the entrypoint then runs plain `node` with no replication.
 
 ## n8n integration contract
 
