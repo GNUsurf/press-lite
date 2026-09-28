@@ -3,8 +3,10 @@
 # --- build: install everything, render the site, drop dev deps ---------------
 FROM node:24-slim AS build
 WORKDIR /app
+# make for `make build`; python3 + g++ so better-sqlite3 can compile from
+# source when no prebuilt binary matches the builder (build stage only).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends make \
+ && apt-get install -y --no-install-recommends make python3 g++ \
  && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
