@@ -1,13 +1,39 @@
+# dependencies
 node_modules/
+
+# build output and render staging
 dist/
 dist.next/
 dist.prev/
+.lighthouseci/
+
+# runtime data (SQLite, uploaded assets, Litestream state)
 data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+
+# secrets and local config
 .env
 .env.*
 !.env.example
-.lighthouseci/
+
+# local tool state
 .claude/
 .poolside/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS and misc
 .DS_Store
+Thumbs.db
 *.log
+npm-debug.log*
+*.tsbuildinfo
+.cache/
+coverage/
+tmp/
