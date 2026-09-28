@@ -2,7 +2,7 @@
 
 This is the owner's guide to wiring n8n to the site. The site pushes events
 to n8n (leads and subscribers), n8n reads and updates leads through the API,
-and n8n publishes blog posts by opening pull requests. Nothing here needs to
+and n8n writes blog drafts through the same API. Nothing here needs to
 be redone on a redeploy; it all lives in n8n and in Railway variables.
 
 ## 1. Events from the site → n8n

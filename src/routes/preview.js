@@ -23,7 +23,12 @@ export async function previewRoutes(app, { distDir }) {
     async (request, reply) => {
       const { token } = /** @type {{ token: string }} */ (request.params);
       const preview = renderPreview({ db: app.db, env: app.env, token, distDir });
-      reply.header('x-robots-tag', 'noindex, nofollow').header('cache-control', 'no-store');
+      // The token in the URL is the secret: never indexed, never cached, and
+      // never sent as a Referer to links inside the draft.
+      reply
+        .header('x-robots-tag', 'noindex, nofollow')
+        .header('cache-control', 'no-store')
+        .header('referrer-policy', 'no-referrer');
       if (!preview) return notFound(reply, distDir);
       return reply.type('text/html; charset=utf-8').send(preview.html);
     },

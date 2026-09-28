@@ -50,6 +50,11 @@ test('create a draft: 201, preview URL, script in body is escaped in the preview
   assert.equal(preview.statusCode, 200);
   assert.equal(preview.headers['x-robots-tag'], 'noindex, nofollow');
   assert.equal(preview.headers['cache-control'], 'no-store');
+  assert.equal(
+    preview.headers['referrer-policy'],
+    'no-referrer',
+    'token must not leak via Referer',
+  );
   assert.ok(preview.body.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
   assert.ok(!/<script>alert/.test(preview.body));
   assert.ok(!preview.body.includes('href="javascript:'));

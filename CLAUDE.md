@@ -235,6 +235,10 @@ Content is written through the API, by people or by the client's automation. The
 
 **What this deliberately does not do:** render per request (pages stay static), accept HTML, accept SVG or arbitrary uploads, send email, or expose any endpoint that returns another client's data (one database per client; there is no tenant id anywhere).
 
+**Two edges to state plainly.** (1) An imported image is served at `/images/<uuid>.<ext>` immediately, even if only a draft uses it: unguessable and unlinked until publish, but reachable by anyone with the URL. (2) A preview link is a bearer token: whoever has it can read the draft. Preview pages send `X-Robots-Tag: noindex`, `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. Images have EXIF/XMP/text metadata stripped at import, so a phone photo cannot publish its location.
+
+**Renders are atomic.** `buildSite()` writes to `dist.next/` and swaps it in by rename; a failed render leaves the live `dist/` untouched (tested).
+
 ### Public endpoints
 
 - **`POST /api/contact`**, JSON or form-encoded. Fields: `name`, `email`, `company` (optional), `message`, `source` (the page path), `form_id` (a UUID the page's script generates; see below), and the honeypot `website`.
@@ -290,7 +294,7 @@ For browser form posts without JavaScript, a 303 redirect to `/contact?sent=1` o
 - Each page has a unique `<title>` and meta description, a canonical URL, Open Graph and Twitter card tags (posts use their own title, description, and cover), and JSON-LD: `ProfessionalService` on the home page, `BlogPosting` on posts.
 - `/sitemap.xml`, `/robots.txt`, `/feed.xml` (RSS), a favicon, and a default Open Graph image.
 - CSP via `@fastify/helmet`: no inline scripts. JavaScript ships as `dist/assets/site.js`.
-- All brand copy comes from `site.config.js`, so rebranding doesn't touch any templates.
+- All brand copy comes from the site-copy document in the database (seeded from `site.config.js` on first boot, edited via `PATCH /api/v1/site` from M12), so rebranding never touches a template.
 
 **Budgets (Lighthouse CI fails the build below these):** Performance ≥ 90 on mobile, Accessibility ≥ 95, Best Practices ≥ 95, SEO ≥ 95. Home page weight excluding video ≤ 500 KB. `hero.mp4` ≤ 4 MB (checked by `check-content`).
 
@@ -352,7 +356,7 @@ For browser form posts without JavaScript, a 303 redirect to `/contact?sent=1` o
 - Per client: generate their keys with `scripts/key.js` (`content:write` for their automation; `content:publish` and `admin` stay with a human), hand over `docs/CLIENT.md` and the `/docs` URL, and confirm whether `review_required` stays on.
 - Create the Railway project and service, mount a volume at `/data`, set the env vars, enable PR environments, and set the healthcheck path to `/api/v1/health`.
 - Create the S3-compatible bucket and credentials for Litestream.
-- In n8n: create the Webhook node with Header Auth, dedupe on `event_id`, create the GitHub credential for the bot, and store the API key from `scripts/key.js`.
+- In n8n: create the Webhook node with Header Auth, dedupe on `event_id`, and store the API keys from `scripts/key.js` (a `content:write` key for the automation; `content:publish` stays with a person).
 - Provide the domain and DNS access (change only the web records; leave MX records alone), real brand copy, and the hero video and poster.
 
 ## Repo rules (from AGENTS.md)

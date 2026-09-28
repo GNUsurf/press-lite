@@ -1,9 +1,12 @@
 /**
- * Static site build: renders every page and post into `dist/`, copies
- * assets, and writes sitemap, robots and RSS. Content comes from a
- * `BuildSource` (files at image build time, the database at run time; see
- * ./source.js). `scripts/build.js` is the CLI; `./renderer.js` drives it
- * inside the server.
+ * Static site build: renders every page and post, copies assets, and writes
+ * sitemap, robots and RSS. Content comes from a `BuildSource` (files at image
+ * build time, the database at run time; see ./source.js). `scripts/build.js`
+ * is the CLI; `./renderer.js` drives it inside the server.
+ *
+ * The output is written to a staging directory (`<dist>.next`) and renamed
+ * into place, so a visitor during a render never sees a half-written page.
+ * A failed render leaves the previous `dist/` untouched.
  *
  * The CSS must already exist at dist/assets/site.css (`make css`); this
  * step only hashes and links it.
@@ -64,12 +67,16 @@ export function buildSite({
     throw new Error(`${CSS_NAME} not found in ${distDir}; run \`make css\` first`);
   }
 
-  cleanDist(distDir, [CSS_NAME]);
-  copyDir(publicDir, distDir);
-  if (source.imagesDir) copyDir(source.imagesDir, path.join(distDir, 'images'));
+  // Everything below writes to `out`; the live directory changes only at the swap.
+  const out = `${distDir}.next`;
+  fs.rmSync(out, { recursive: true, force: true });
+  fs.mkdirSync(out, { recursive: true });
+  const css = publishAsset(out, cssPath, 'site', 'css', dev);
+  writeFile(path.join(out, CSS_NAME), fs.readFileSync(cssPath)); // keep the unhashed one for `make dev`
+  copyDir(publicDir, out);
+  if (source.imagesDir) copyDir(source.imagesDir, path.join(out, 'images'));
 
-  const css = publishAsset(distDir, cssPath, 'site', 'css', dev);
-  const js = publishAsset(distDir, CLIENT_JS, 'site', 'js', dev);
+  const js = publishAsset(out, CLIENT_JS, 'site', 'js', dev);
   const poster = imageSize(path.join(publicDir, 'hero-poster.jpg'));
   if (!poster) throw new Error('public/hero-poster.jpg is missing or unreadable');
 
@@ -106,17 +113,18 @@ export function buildSite({
   ];
   const pages = renders.map(([p]) => p);
   for (const [pagePath, render] of renders) {
-    writeFile(path.join(distDir, outputFile(pagePath, pages)), render().toString());
+    writeFile(path.join(out, outputFile(pagePath, pages)), render().toString());
   }
 
-  writeFile(path.join(distDir, 'sitemap.xml'), sitemap(ctx, pages));
-  writeFile(path.join(distDir, 'robots.txt'), robots(ctx));
-  writeFile(path.join(distDir, 'feed.xml'), feed(ctx));
+  writeFile(path.join(out, 'sitemap.xml'), sitemap(ctx, pages));
+  writeFile(path.join(out, 'robots.txt'), robots(ctx));
+  writeFile(path.join(out, 'feed.xml'), feed(ctx));
   writeFile(
-    path.join(distDir, 'build.json'),
+    path.join(out, 'build.json'),
     JSON.stringify({ siteUrl, builtAt, dev, pages, assets: { css, js } }, null, 2),
   );
 
+  swapIn(out, distDir);
   return { pages, siteUrl };
 }
 
@@ -190,35 +198,29 @@ ${items}  </channel>
 }
 
 /**
- * Copy `source` to dist/assets/<name>.<hash>.<ext> (or unhashed in dev) and
+ * Copy `source` to <out>/assets/<name>.<hash>.<ext> (or unhashed in dev) and
  * return its public path.
- * @param {string} distDir @param {string} source @param {string} name @param {string} ext @param {boolean} dev
+ * @param {string} out @param {string} source @param {string} name @param {string} ext @param {boolean} dev
  */
-function publishAsset(distDir, source, name, ext, dev) {
+function publishAsset(out, source, name, ext, dev) {
   const content = fs.readFileSync(source);
   const file = dev ? `${name}.${ext}` : `${name}.${sha256(content).slice(0, 12)}.${ext}`;
-  writeFile(path.join(distDir, 'assets', file), content);
+  writeFile(path.join(out, 'assets', file), content);
   return `/assets/${file}`;
 }
 
 /**
- * Empty distDir except the listed relative paths.
- * @param {string} distDir @param {string[]} keep
+ * Replace `distDir` with the staged `out` in two renames. A request that
+ * lands between them gets a 404 for a few microseconds; none gets a partial
+ * page. The previous build is removed afterwards.
+ * @param {string} out @param {string} distDir
  */
-function cleanDist(distDir, keep) {
-  const keepAbs = new Set(keep.map((k) => path.join(distDir, k)));
-  fs.mkdirSync(distDir, { recursive: true });
-  for (const entry of fs.readdirSync(distDir, { withFileTypes: true })) {
-    const abs = path.join(distDir, entry.name);
-    if (entry.isDirectory()) {
-      for (const inner of fs.readdirSync(abs)) {
-        const innerAbs = path.join(abs, inner);
-        if (!keepAbs.has(innerAbs)) fs.rmSync(innerAbs, { recursive: true, force: true });
-      }
-    } else if (!keepAbs.has(abs)) {
-      fs.rmSync(abs, { force: true });
-    }
-  }
+function swapIn(out, distDir) {
+  const previous = `${distDir}.prev`;
+  fs.rmSync(previous, { recursive: true, force: true });
+  if (fs.existsSync(distDir)) fs.renameSync(distDir, previous);
+  fs.renameSync(out, distDir);
+  fs.rmSync(previous, { recursive: true, force: true });
 }
 
 /** @param {string} from @param {string} to */

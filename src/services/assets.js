@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { sha256, uuid } from '../lib/crypto.js';
 import { imageSizeOf } from '../lib/image-size.js';
+import { stripMetadata } from '../lib/image-strip.js';
 import { nowIso } from '../lib/time.js';
 import { MAX_IMAGE_BYTES, IMAGE_EXT, IMAGE_MIME } from '../content/rules.js';
 import { audit } from './audit.js';
@@ -70,6 +71,8 @@ export function importAssetBuffer(db, dataDir, { buffer, filename = null, create
   const size = imageSizeOf(buffer);
   if (!size) throw new AssetError('asset_not_image', 'not a PNG, JPEG or WebP image');
 
+  // EXIF/XMP/text chunks never reach disk: a phone photo must not publish its GPS.
+  buffer = stripMetadata(buffer, size.type);
   const hash = sha256(buffer);
   const existing = /** @type {Asset | undefined} */ (
     db.prepare('SELECT * FROM assets WHERE sha256 = ?').get(hash)

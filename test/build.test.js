@@ -159,6 +159,40 @@ test('dev builds use unhashed asset names; a rebuild replaces stale output', () 
   assert.match(read('index.html'), /href="https:\/\/other\.test\/"/);
 });
 
+test('renders into dist.next and swaps it in; a failed render leaves the live dist untouched', () => {
+  const { distDir, read } = build();
+  const before = read('index.html');
+  assert.ok(!fs.existsSync(`${distDir}.next`) && !fs.existsSync(`${distDir}.prev`));
+
+  // A source that throws mid-render (bad post) must not disturb the live site.
+  const broken = fixtureSource();
+  broken.posts = [
+    /** @type {any} */ ({
+      ...broken.posts[0],
+      get html() {
+        throw new Error('boom');
+      },
+    }),
+  ];
+  assert.throws(
+    () =>
+      buildSite({ siteUrl: 'https://example.test', source: broken, distDir, publicDir: PUBLIC }),
+    /boom/,
+  );
+  assert.equal(read('index.html'), before, 'live index.html unchanged');
+  assert.ok(fs.existsSync(path.join(distDir, 'blog/good-post-with-cover.html')));
+  assert.ok(fs.existsSync(`${distDir}.next`), 'staging dir is left for inspection');
+
+  // The next successful render cleans up.
+  buildSite({
+    siteUrl: 'https://example.test',
+    source: fixtureSource(),
+    distDir,
+    publicDir: PUBLIC,
+  });
+  assert.ok(!fs.existsSync(`${distDir}.next`) && !fs.existsSync(`${distDir}.prev`));
+});
+
 test('refuses to build without the CSS', () => {
   assert.throws(
     () =>

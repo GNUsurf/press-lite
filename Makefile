@@ -51,4 +51,4 @@ smoke: ## build the image if docker is available, run it, curl every page, conta
 	$(NODE) scripts/smoke.js
 
 clean:
-	rm -rf dist
+	rm -rf dist dist.next dist.prev
