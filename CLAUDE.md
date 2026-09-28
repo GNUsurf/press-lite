@@ -347,7 +347,7 @@ For browser form posts without JavaScript, a 303 redirect to `/contact?sent=1` o
   _Done when:_ an SVG upload and a 301 KB PNG both get 422; a PATCH with an 80-character tagline gets 422 naming the field; a valid PATCH re-renders the home page within 2 s.
 - **M13: the safety rails.** `review_required` and `daily_publish_quota` settings; per-key write rate limit; circuit breaker (`key.paused` event, 423, `unpause`); freeze/unfreeze; audit log; `GET /export`.
   _Done when:_ tests show 20 rejected requests pause a key and the 21st gets 423; `freeze` makes every write 423 while `GET /` still returns 200; a `content:write` key cannot publish while `review_required` is on and can once it's off.
-- **M14: docs for the client.** `GET /openapi.json` generated from the route schemas, `GET /docs` rendered from it at build time, and `docs/CLIENT.md`: the one-page "here is your key, here is how you update, here is how you get your data out". `docs/N8N.md` updated for the content events and endpoints.
+- **M14: docs for the client.** `GET /api/v1/openapi.json` generated from the registered routes (schemas, scopes, idempotency) plus the prose map in `src/lib/openapi.js`; `GET /docs` rendered from it at request time with the site layout (cached; the site name lives in the database, so build time is too early), and `docs/CLIENT.md`: the one-page "here is your key, here is how you update, here is how you get your data out". `docs/N8N.md` updated for the content events and endpoints. Done ahead of M12/M13; new routes need an `OPERATIONS` entry or the docs test fails.
   _Done when:_ every v1 route appears in `openapi.json` with its schema, and a test fails if a route is added without one.
 
 ## Human-only steps (stop and ask; never fake these)

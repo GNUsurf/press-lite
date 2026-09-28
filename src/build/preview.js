@@ -1,8 +1,8 @@
 /**
- * Render one post's head version on demand, for `/preview/<token>`. Uses
- * the same templates and site copy as the static build, plus the asset
- * paths recorded in dist/build.json, so a preview looks exactly like the
- * page will once published.
+ * Pages rendered at request time (post previews, the API docs) share the
+ * static build's templates, site copy and asset paths, so they look exactly
+ * like the built pages. `runtimeContext()` assembles that from the database
+ * and dist/build.json.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,24 +15,22 @@ import { DIST_DIR, PUBLIC_DIR } from './site.js';
 import { postFromVersion } from './source.js';
 
 /**
- * @param {object} options
- * @param {import('../db/index.js').Db} options.db
- * @param {Pick<import('../lib/env.js').Env, 'siteUrl' | 'dataDir'>} options.env
- * @param {string} options.token
- * @param {string} [options.distDir]
- * @param {string} [options.publicDir]
- * @returns {{ html: string, slug: string } | null}  null when there is no such draft or no build yet
+ * @typedef {object} RuntimeOptions
+ * @property {import('../db/index.js').Db} db
+ * @property {Pick<import('../lib/env.js').Env, 'siteUrl' | 'dataDir'>} env
+ * @property {string} [distDir]
+ * @property {string} [publicDir]
  */
-export function renderPreview({ db, env, token, distDir = DIST_DIR, publicDir = PUBLIC_DIR }) {
-  const d = getPostByPreviewToken(db, token);
-  if (!d) return null;
 
+/**
+ * @param {RuntimeOptions} options
+ * @returns {import('./context.js').BuildContext | null}  null before the first render
+ */
+export function runtimeContext({ db, env, distDir = DIST_DIR, publicDir = PUBLIC_DIR }) {
   const build = readBuild(distDir);
   const poster = imageSize(path.join(publicDir, 'hero-poster.jpg'));
   if (!build || !poster) return null;
-
-  /** @type {import('./context.js').BuildContext} */
-  const ctx = {
+  return {
     site: getSiteCopy(db)?.data ?? defaultSite,
     siteUrl: env.siteUrl,
     posts: [],
@@ -44,7 +42,18 @@ export function renderPreview({ db, env, token, distDir = DIST_DIR, publicDir = 
     },
     builtAt: new Date().toISOString(),
   };
-  const post = postFromVersion(db, d.post, d.head);
+}
+
+/**
+ * Render one post's head version on demand, for `/preview/<token>`.
+ * @param {RuntimeOptions & { token: string }} options
+ * @returns {{ html: string, slug: string } | null}  null when there is no such draft or no build yet
+ */
+export function renderPreview({ token, ...options }) {
+  const d = getPostByPreviewToken(options.db, token);
+  const ctx = d && runtimeContext(options);
+  if (!d || !ctx) return null;
+  const post = postFromVersion(options.db, d.post, d.head);
   return { html: renderPost(ctx, post).toString(), slug: post.slug };
 }
 

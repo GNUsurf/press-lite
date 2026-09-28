@@ -16,9 +16,10 @@ platform (M10–M14, the "your AI can't break this" contract in `CLAUDE.md`),
 M10 and M11 are done: content lives in SQLite, `content/` and
 `site.config.js` are seed data for the first boot, the server renders the
 pages from the database, and posts are written through `/api/v1/posts`
-(drafts, previews, versions, revert, a human publish step). Site copy and
-image uploads over the API (M12), the safety-rail settings (M13) and the
-generated API docs (M14) are still to come.
+(drafts, previews, versions, revert, a human publish step), and the API
+documents itself at `/docs` and `/api/v1/openapi.json` (M14). Site copy and
+image uploads over the API (M12) and the safety-rail settings (M13) are still
+to come.
 
 The full contract (endpoints, status codes, events, budgets, milestones) is in
 [`CLAUDE.md`](CLAUDE.md). What is not finished or deviates from it is in

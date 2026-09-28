@@ -21,7 +21,9 @@ import { publicRoutes } from './routes/public.js';
 import { v1Routes } from './routes/v1.js';
 import { contentRoutes } from './routes/content.js';
 import { previewRoutes } from './routes/preview.js';
+import { docsRoutes, packageVersion } from './routes/docs.js';
 import { recordIdempotentResponse } from './routes/auth.js';
+import { routeCollector } from './lib/openapi.js';
 import { createOutboxWorker } from './worker/outbox.js';
 import { DIST_DIR } from './build/site.js';
 import { createRenderer, nullRenderer } from './build/renderer.js';
@@ -99,6 +101,10 @@ export async function buildApp({
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler(notFoundHandler(distDir));
 
+  // Every API route is collected as it registers, for /api/v1/openapi.json.
+  const collector = routeCollector();
+  app.addHook('onRoute', collector.hook);
+
   await app.register(publicRoutes, { prefix: '/api' });
   await app.register(
     async (v1) => {
@@ -110,6 +116,11 @@ export async function buildApp({
     { prefix: '/api/v1' },
   );
   await app.register(previewRoutes, { distDir });
+  await app.register(docsRoutes, {
+    routes: collector.routes,
+    distDir,
+    version: packageVersion(path.join(DIST_DIR, '..')),
+  });
 
   // Uploaded/seeded images live on the data volume, not in dist/. Their names
   // are uuids and the bytes never change, so they cache forever.
