@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from '../src/lib/env.js';
 import { sourceFromFiles } from '../src/build/source.js';
+import { createRenderer, nullRenderer } from '../src/build/renderer.js';
 import { sha256 } from '../src/lib/crypto.js';
 import { openDatabase } from '../src/db/index.js';
 import { buildApp } from '../src/server.js';
@@ -16,12 +17,14 @@ export const KEYS = {
   admin: 'test-admin-key-000000000000000000000000',
   reader: 'test-reader-key-00000000000000000000000',
   writer: 'test-writer-key-00000000000000000000000',
+  publisher: 'test-publisher-key-00000000000000000000',
 };
 
 export const API_KEYS = [
   `admin:admin:${sha256(KEYS.admin)}`,
-  `reader:leads:read:${sha256(KEYS.reader)}`,
-  `writer:leads:read,leads:write:${sha256(KEYS.writer)}`,
+  `reader:leads:read,content:read:${sha256(KEYS.reader)}`,
+  `writer:leads:read,leads:write,content:read,content:write:${sha256(KEYS.writer)}`,
+  `publisher:content:read,content:write,content:publish:${sha256(KEYS.publisher)}`,
 ].join(';');
 
 export const N8N = {
@@ -82,25 +85,29 @@ export function fakeClock(start = Date.parse('2026-01-01T00:00:00.000Z')) {
 }
 
 /**
- * @param {{ clock?: ReturnType<typeof fakeClock>, memory?: boolean }} [options]
+ * @param {{ clock?: ReturnType<typeof fakeClock>, memory?: boolean, render?: boolean }} [options]
+ *   `render: true` gives the app a real renderer over a file DB and a temp
+ *   dist (with CSS), so publish/delete tests can see pages and redirects.
  */
-export async function makeApp({ clock = fakeClock(), memory = true } = {}) {
+export async function makeApp({ clock = fakeClock(), memory = true, render = false } = {}) {
   const env = loadEnv(envVars());
-  const db = openDatabase(env.dataDir, { memory });
-  const app = await buildApp({
-    env,
-    db,
-    clock,
-    logger: false,
-    distDir: path.join(env.dataDir, 'nodist'),
-  });
+  const db = openDatabase(env.dataDir, { memory: memory && !render });
+  const distDir = render ? emptyDist() : path.join(env.dataDir, 'nodist');
+  const log = fakeLog();
+  const renderer = render ? createRenderer({ db, env, log, distDir, delayMs: 10 }) : nullRenderer();
+  const app = await buildApp({ env, db, clock, logger: false, distDir, renderer });
+  if (render) renderer.renderNow(); // as main() does at boot
   await app.ready();
   return {
     app,
     db,
     env,
     clock,
+    distDir,
+    renderer,
+    log,
     async close() {
+      renderer.stop();
       await app.close();
       db.close();
     },

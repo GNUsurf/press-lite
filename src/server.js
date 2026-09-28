@@ -19,6 +19,9 @@ import { withQuery } from './lib/urls.js';
 import { openDatabase, isDatabaseUnavailable } from './db/index.js';
 import { publicRoutes } from './routes/public.js';
 import { v1Routes } from './routes/v1.js';
+import { contentRoutes } from './routes/content.js';
+import { previewRoutes } from './routes/preview.js';
+import { recordIdempotentResponse } from './routes/auth.js';
 import { createOutboxWorker } from './worker/outbox.js';
 import { DIST_DIR } from './build/site.js';
 import { createRenderer, nullRenderer } from './build/renderer.js';
@@ -97,7 +100,16 @@ export async function buildApp({
   app.setNotFoundHandler(notFoundHandler(distDir));
 
   await app.register(publicRoutes, { prefix: '/api' });
-  await app.register(v1Routes, { prefix: '/api/v1' });
+  await app.register(
+    async (v1) => {
+      // Every v1 POST/PATCH records its response for Idempotency-Key replays.
+      v1.addHook('onSend', recordIdempotentResponse);
+      await v1.register(v1Routes);
+      await v1.register(contentRoutes);
+    },
+    { prefix: '/api/v1' },
+  );
+  await app.register(previewRoutes, { distDir });
 
   // Uploaded/seeded images live on the data volume, not in dist/. Their names
   // are uuids and the bytes never change, so they cache forever.

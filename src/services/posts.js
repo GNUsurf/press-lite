@@ -141,7 +141,11 @@ export function updatePost(db, id, patch, by, { clock, ifVersion } = {}) {
         version: current.post.head_version,
       });
     }
-    const merged = { ...versionToInput(current.head), ...stripUndefined(patch) };
+    const merged = {
+      ...versionToInput(current.head),
+      slug: current.post.slug,
+      ...stripUndefined(patch),
+    };
     const content = checkContent(db, merged, current.head.date);
 
     if (content.slug !== current.post.slug) {

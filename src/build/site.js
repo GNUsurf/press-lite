@@ -114,7 +114,7 @@ export function buildSite({
   writeFile(path.join(distDir, 'feed.xml'), feed(ctx));
   writeFile(
     path.join(distDir, 'build.json'),
-    JSON.stringify({ siteUrl, builtAt, dev, pages }, null, 2),
+    JSON.stringify({ siteUrl, builtAt, dev, pages, assets: { css, js } }, null, 2),
   );
 
   return { pages, siteUrl };

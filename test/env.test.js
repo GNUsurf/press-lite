@@ -9,7 +9,7 @@ test('loads a complete environment', () => {
   const env = loadEnv(envVars({ SITE_URL: 'https://example.test/' }));
   assert.equal(env.port, 3000);
   assert.equal(env.siteUrl, 'https://example.test');
-  assert.equal(env.apiKeys.length, 3);
+  assert.equal(env.apiKeys.length, 4);
   assert.equal(env.production, false);
 });
 
@@ -37,7 +37,7 @@ test('rejects a bad PORT and a non-URL SITE_URL', () => {
 });
 
 test('API_KEYS parsing validates shape, scopes and hashes', () => {
-  assert.equal(parseApiKeys(API_KEYS)[1].scopes.join(), 'leads:read');
+  assert.equal(parseApiKeys(API_KEYS)[1].scopes.join(), 'leads:read,content:read');
   assert.throws(() => parseApiKeys('nope'), /name:scopes:sha256hex/);
   assert.throws(() => parseApiKeys(`a:root:${sha256('x')}`), /unknown scope/);
   assert.throws(() => parseApiKeys('a:admin:nothex'), /name:scopes:sha256hex/);

@@ -5,7 +5,14 @@
  */
 import { sha256, timingSafeEqualHex } from './crypto.js';
 
-export const SCOPES = /** @type {const} */ (['leads:read', 'leads:write', 'admin']);
+export const SCOPES = /** @type {const} */ ([
+  'leads:read',
+  'leads:write',
+  'content:read',
+  'content:write',
+  'content:publish',
+  'admin',
+]);
 /** @typedef {typeof SCOPES[number]} Scope */
 
 /**

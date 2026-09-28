@@ -2,7 +2,7 @@
  * /api/v1: what n8n calls. See "Inbound: n8n → site" in CLAUDE.md.
  */
 import { nowIso } from '../lib/time.js';
-import { requireScope, idempotent, recordIdempotentResponse } from './auth.js';
+import { requireScope, idempotent } from './auth.js';
 import { getLead, listLeads, updateLead, publicLead, LEAD_STATUSES } from '../services/leads.js';
 import { listOutbox, outboxStats, retryDead } from '../services/outbox.js';
 
@@ -30,8 +30,6 @@ const leadPatchBody = {
 
 /** @type {import('fastify').FastifyPluginAsync} */
 export async function v1Routes(app) {
-  app.addHook('onSend', recordIdempotentResponse);
-
   app.get('/health', async () => ({ ok: true }));
 
   app.get('/status', { preHandler: requireScope('admin') }, async () => ({
@@ -137,7 +135,7 @@ export async function v1Routes(app) {
  * `If-Match: "3"` or `If-Match: 3` → 3; absent → undefined; garbage → null.
  * @param {string | string[] | undefined} header
  */
-function parseIfMatch(header) {
+export function parseIfMatch(header) {
   if (header === undefined) return undefined;
   const value = Array.isArray(header) ? header[0] : header;
   const match = /^\s*(?:W\/)?"?(\d+)"?\s*$/.exec(value);

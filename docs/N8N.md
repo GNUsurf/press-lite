@@ -43,8 +43,10 @@ be redone on a redeploy; it all lives in n8n and in Railway variables.
 ```
 
 Event types: `lead.created` (contact form), `subscriber.created` (newsletter
-or lead magnet; `data` has `email`, `list`, `source`), and `lead.updated`
-(only when a human edits a lead; your own PATCHes never echo back).
+or lead magnet; `data` has `email`, `list`, `source`), `lead.updated`
+(only when a human edits a lead; your own PATCHes never echo back),
+`post.published` and `post.unpublished` (`data` has `id`, `slug`, `version`,
+`url`, and `deleted: true` when the post was deleted; never the body).
 
 Headers on every delivery:
 
@@ -100,8 +102,11 @@ node scripts/key.js n8n leads:read,leads:write
 It prints the key once and an `API_KEYS` line. Put the key in an n8n
 **Header Auth** credential (`Authorization: Bearer <key>`); append the line to
 the `API_KEYS` variable in Railway (entries separated by `;`). Scopes:
-`leads:read`, `leads:write`, `admin`. A key with the wrong scope gets 403; an
-unknown key gets 401.
+`leads:read`, `leads:write`, `content:read`, `content:write`,
+`content:publish`, `admin`. A key lists exactly what it may do; `admin` does
+not imply the others. Give automation `content:write` and keep
+`content:publish` (and `admin`) with a person. A key with the wrong scope gets
+403; an unknown key gets 401.
 
 | Call                                 | Scope       | Notes                                                                                                                                                                                                       |
 | ------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -128,22 +133,36 @@ with `Retry-After: 2`. Keys are remembered for 24 hours.
 422 validation failed / key reused · 429 slow down (`Retry-After`) ·
 503 database busy, retry.
 
-## 3. Blog posts: open a pull request, never call the API
+## 3. Blog posts: drafts through the API, a person publishes
 
-1. n8n **GitHub** node (credential: the bot account's fine-grained PAT, this
-   repo only, Contents + Pull requests: write) creates branch `brief/<brief_id>`
-   from `main`. If the branch already exists the run fails, which is the
-   intended deduplication.
-2. Create file `content/posts/<slug>.md` on that branch. Optional image in
-   `content/images/<file>` (PNG/JPEG/WebP, ≤ 300 KB).
-3. Open a PR from `brief/<brief_id>` to `main`.
-4. CI runs `check-content`; Railway builds a preview URL. The owner reviews,
-   edits if needed, and **merges — that is the only way anything publishes.**
+No git, no pull requests. Your automation writes drafts; someone with the
+`content:publish` key makes them live. Every call needs `Authorization:
+Bearer <key>` and (for POST/PATCH/DELETE) an `Idempotency-Key` header.
 
-The bot must only touch `content/`. A bot PR that changes anything else fails
-CI (`CONTENT_BOT_LOGIN` repo variable holds the bot's login).
+1. `POST /api/v1/posts` (`content:write`) with JSON:
+   `{ "slug": "kebab-case", "title": "10–70 chars", "description": "50–160 chars",
+"body": "Markdown, ≤ 64 KB", "tags": ["1–5 tags"], "date": "YYYY-MM-DD" (optional) }`.
+   Reply is 201 with the post, its `id`, and a `preview_url`: an unlisted,
+   noindex page showing exactly how the post will look. Raw HTML in the body
+   is shown as text, never rendered.
+2. Edit with `PATCH /api/v1/posts/:id` (any of the fields above). Send
+   `If-Match: "<head_version>"` to avoid clobbering a concurrent edit (412 on
+   mismatch). Editing a published post creates a new draft version; the live
+   page doesn't change until the next publish.
+3. Publish with `POST /api/v1/posts/:id/publish` (`content:publish`). The page
+   is live within about a second and a `post.published` event is sent.
+   `POST …/unpublish` takes it down (post kept); `DELETE …` soft-deletes and
+   301-redirects the old URL to `/blog`.
+4. Every version is kept: `GET …/versions` lists them, `POST …/revert/:version`
+   restores one (and publishes it if the post is live).
 
-Post format:
+Rules the API enforces so nothing can break the site: the slug can't change
+once published (422 `slug_immutable`); a slug can't be reused (409
+`slug_conflict`); bad or oversized fields get 422 with the field named;
+`content:write` can't publish (403).
+
+Seed post format (only for files shipped in the repo's `content/posts/`; they
+are imported on the very first boot and then owned by the database):
 
 ```markdown
 ---

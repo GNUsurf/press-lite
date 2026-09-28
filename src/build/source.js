@@ -41,20 +41,30 @@ export function sourceFromFiles({
 export function sourceFromDb(db, dataDir) {
   assetsDir(dataDir);
   const site = getSiteCopy(db)?.data ?? defaultSite;
-  const posts = listLivePosts(db).map(({ post, live }) => {
-    const cover = live.cover_asset_id ? getAsset(db, live.cover_asset_id) : undefined;
-    return /** @type {import('../content/posts.js').Post} */ ({
-      title: live.title,
-      description: live.description,
-      date: live.date,
-      slug: post.slug,
-      tags: JSON.parse(live.tags),
-      draft: false,
-      markdown: live.body,
-      html: renderMarkdown(live.body),
-      coverUrl: cover ? assetUrl(cover) : null,
-      coverSize: cover ? { width: cover.width, height: cover.height } : null,
-    });
-  });
+  const posts = listLivePosts(db).map(({ post, live }) => postFromVersion(db, post, live));
   return { site, posts: sortPosts(posts), imagesDir: null };
+}
+
+/**
+ * A renderable post from a DB row and one of its versions (live for the
+ * site, head for previews).
+ * @param {import('../db/index.js').Db} db
+ * @param {import('../services/posts.js').PostRow} post
+ * @param {import('../services/posts.js').PostVersionRow} version
+ * @returns {import('../content/posts.js').Post}
+ */
+export function postFromVersion(db, post, version) {
+  const cover = version.cover_asset_id ? getAsset(db, version.cover_asset_id) : undefined;
+  return {
+    title: version.title,
+    description: version.description,
+    date: version.date,
+    slug: post.slug,
+    tags: JSON.parse(version.tags),
+    draft: post.status !== 'published',
+    markdown: version.body,
+    html: renderMarkdown(version.body),
+    coverUrl: cover ? assetUrl(cover) : null,
+    coverSize: cover ? { width: cover.width, height: cover.height } : null,
+  };
 }
