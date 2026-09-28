@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { loadEnv, EnvError } from '../src/lib/env.js';
 import { parseApiKeys, findApiKey } from '../src/lib/api-keys.js';
 import { sha256 } from '../src/lib/crypto.js';
@@ -10,6 +11,8 @@ test('loads a complete environment', () => {
   assert.equal(env.port, 3000);
   assert.equal(env.siteUrl, 'https://example.test');
   assert.equal(env.apiKeys.length, 4);
+  const relative = loadEnv(envVars({ DATA_DIR: './data' }));
+  assert.ok(path.isAbsolute(relative.dataDir), 'DATA_DIR is resolved to an absolute path');
   assert.equal(env.production, false);
 });
 

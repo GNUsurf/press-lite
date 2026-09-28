@@ -3,6 +3,7 @@
  * `EnvError` naming it, and `main()` turns that into a non-zero exit.
  * There are no defaults for secrets.
  */
+import path from 'node:path';
 import { parseApiKeys } from './api-keys.js';
 
 const REQUIRED = [
@@ -58,7 +59,9 @@ export function loadEnv(source = process.env) {
 
   return Object.freeze({
     port,
-    dataDir: /** @type {string} */ (source.DATA_DIR),
+    // Absolute: @fastify/static and the renderer need a real root, and `.env`
+    // files naturally say `./data`.
+    dataDir: path.resolve(/** @type {string} */ (source.DATA_DIR)),
     siteUrl,
     n8nWebhookUrl: /** @type {string} */ (source.N8N_WEBHOOK_URL),
     n8nWebhookToken: /** @type {string} */ (source.N8N_WEBHOOK_TOKEN),
