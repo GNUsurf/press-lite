@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --color-ink: #0f172a;
+  --color-ink-muted: #475569;
+  --color-paper: #ffffff;
+  --color-paper-alt: #f8fafc;
+  --color-accent: #2563eb;
+  --color-accent-strong: #1d4ed8;
+  --spacing-nav: 4rem;
+}
+
+@layer base {
+  html {
+    scroll-padding-top: var(--spacing-nav);
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
+
+/* Custom utilities (v4: @utility, so they work with variants and @apply). */
+@utility container-narrow {
+  @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+}
+@utility btn-primary {
+  @apply inline-flex items-center justify-center rounded-md bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-strong;
+}
+@utility btn-ghost {
+  @apply inline-flex items-center justify-center rounded-md border border-white/40 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10;
+}
+@utility field {
+  @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-ink placeholder:text-slate-400;
+}
+@utility hero {
+  min-height: 100svh;
+}
+
+@layer components {
+  .prose-post {
+    @apply text-lg leading-relaxed text-ink;
+  }
+  .prose-post h2 {
+    @apply mt-10 mb-4 text-2xl font-bold;
+  }
+  .prose-post h3 {
+    @apply mt-8 mb-3 text-xl font-semibold;
+  }
+  .prose-post p,
+  .prose-post ul,
+  .prose-post ol,
+  .prose-post blockquote,
+  .prose-post pre {
+    @apply my-5;
+  }
+  .prose-post ul {
+    @apply list-disc pl-6;
+  }
+  .prose-post ol {
+    @apply list-decimal pl-6;
+  }
+  .prose-post a {
+    @apply text-accent underline underline-offset-2;
+  }
+  .prose-post blockquote {
+    @apply border-l-4 border-slate-200 pl-4 text-ink-muted;
+  }
+  .prose-post pre {
+    @apply overflow-x-auto rounded-md bg-slate-900 p-4 text-sm text-slate-100;
+  }
+  .prose-post code {
+    @apply rounded bg-slate-100 px-1 py-0.5 text-[0.9em];
+  }
+  .prose-post pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-post img {
+    @apply my-6 h-auto max-w-full rounded-md;
+  }
+}

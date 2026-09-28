@@ -1,0 +1,10 @@
+# The owner must review anything that changes what runs. Replace @OWNER with
+# the GitHub login and enable "Require review from Code Owners" on main.
+/.github/   @OWNER
+/Makefile   @OWNER
+/scripts/   @OWNER
+/src/       @OWNER
+/Dockerfile @OWNER
+/docker/    @OWNER
+/package.json      @OWNER
+/package-lock.json @OWNER

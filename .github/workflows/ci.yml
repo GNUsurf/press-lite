@@ -1,0 +1,51 @@
+# Runs on GitHub-hosted runners only. PR workflows execute the PR branch's
+# copy of this file, so a bot PR could change what runs; hosted runners are
+# disposable, which is why we never use self-hosted ones here.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Non-secret values so `make ci` can build and smoke-test. Real values live in Railway.
+  PORT: '3000'
+  DATA_DIR: /tmp/data
+  SITE_URL: https://example.test
+  N8N_WEBHOOK_URL: http://127.0.0.1:9/webhook/down
+  N8N_WEBHOOK_TOKEN: ci
+  N8N_SIGNING_SECRET: ci
+  API_KEYS: 'ci:admin:0000000000000000000000000000000000000000000000000000000000000000'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: make ci
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: npm audit --audit-level=high
+
+      - name: Lighthouse budgets
+        run: npx lhci autorun
