@@ -1,4 +1,7 @@
-# Brand site + n8n backend
+# press-lite
+
+A purpose-built alternative to WordPress for a marketing site: static pages,
+a content API your automation can't break, and an n8n backend.
 
 A marketing site with a blog, and the small backend that connects it to a
 client's automation: contact and newsletter forms land in SQLite and are
