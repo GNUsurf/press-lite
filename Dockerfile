@@ -4,7 +4,7 @@
 FROM node:24-slim AS build
 WORKDIR /app
 RUN apt-get update \
- && apt-get install -y --no-install-recommends make \
+ && apt-get install -y --no-install-recommends make python3 g++ \
  && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
